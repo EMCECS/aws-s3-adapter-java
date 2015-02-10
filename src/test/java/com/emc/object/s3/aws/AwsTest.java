@@ -23,8 +23,6 @@ import org.junit.Test;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -37,7 +35,6 @@ public class AwsTest {
 
     private static EcsAwsAdapter s3;
     private Map<String, Set<String>> bucketsAndKeys = new TreeMap<String, Set<String>>();
-
 
     @Test
     public void testCrudBuckets() throws Exception {
@@ -74,6 +71,7 @@ public class AwsTest {
         s3.createBucket(bucket);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setHeader(key, content);
+        metadata.setContentLength(content.length());
         s3.putObject(bucket, key, new StringInputStream(content), metadata);
         createdKeys(bucket).add(key);
 
@@ -196,49 +194,6 @@ public class AwsTest {
 
         int size = copyStream(object.getObjectContent(), null);
         Assert.assertEquals("Wrong object size", objectSize, size);
-    }
-
-    @Test
-    public void testMultipartList() throws Exception {
-        String bucket = "multipart-list-bucket";
-        String key = "multipartListKey";
-
-        s3.createBucket(bucket);
-        createdKeys(bucket);
-
-        // initiate multipart
-        InitiateMultipartUploadResult result;
-        result = s3.initiateMultipartUpload(new InitiateMultipartUploadRequest(bucket, key));
-
-        int partSize = 100 * 1024;
-
-        // send part 1
-        UploadPartRequest request = new UploadPartRequest();
-        request.withBucketName(bucket).withKey(key)
-                .withUploadId(result.getUploadId()).withPartNumber(1)
-                .withInputStream(new ByteArrayInputStream(new byte[partSize]))
-                .withPartSize(partSize);
-        String etag1 = s3.uploadPart(request).getETag();
-
-        // send part 2
-        request.withBucketName(bucket).withKey(key)
-                .withUploadId(result.getUploadId()).withPartNumber(2)
-                .withInputStream(new ByteArrayInputStream(new byte[partSize]))
-                .withPartSize(partSize);
-        String etag2 = s3.uploadPart(request).getETag();
-
-        // list parts
-        PartListing listing = s3.listParts(new ListPartsRequest(bucket, key,
-                result.getUploadId()).withMaxParts(1000));
-        Assert.assertEquals("Wrong number of parts", 2, listing.getParts().size());
-
-        // complete multipart
-        List<PartETag> etags = Arrays.asList(new PartETag(1, etag1), new PartETag(2, etag2));
-        s3.completeMultipartUpload(new CompleteMultipartUploadRequest(bucket, key, result.getUploadId(), etags));
-
-        createdKeys(bucket).add(key);
-
-        s3.getObject(bucket, key);
     }
 
     @After

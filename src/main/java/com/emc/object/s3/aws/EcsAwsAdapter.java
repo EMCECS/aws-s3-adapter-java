@@ -5,7 +5,6 @@
 package com.emc.object.s3.aws;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.regions.Region;
@@ -52,7 +51,6 @@ import com.emc.object.s3.request.*;
 
 import java.io.*;
 import java.net.URL;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -667,7 +665,7 @@ public class EcsAwsAdapter implements AmazonS3 {
             ObjectMetadata md = new ObjectMetadata();
             md.setLastModified(oldMd.getLastModified());
             md.setContentType(oldMd.getContentType());
-            md.setContentLength(oldMd.getContentLength());
+            if (oldMd.getContentLength() != null) md.setContentLength(oldMd.getContentLength());
             md.setCacheControl(oldMd.getCacheControl());
             md.setContentDisposition(oldMd.getContentDisposition());
             md.setContentEncoding(oldMd.getContentEncoding());
@@ -1186,7 +1184,7 @@ public class EcsAwsAdapter implements AmazonS3 {
      * </p>
      */
     @Override
-    public void setBucketNotificationConfiguration(SetBucketNotificationConfigurationRequest setBucketNotificationConfigurationRequest) throws AmazonClientException, AmazonServiceException {
+    public void setBucketNotificationConfiguration(SetBucketNotificationConfigurationRequest setBucketNotificationConfigurationRequest) throws AmazonClientException {
         throw new UnsupportedOperationException();
     }
 
@@ -1464,6 +1462,7 @@ public class EcsAwsAdapter implements AmazonS3 {
         for (PartETag tag : request.getPartETags()) {
             mpList.add(new MultipartPart(tag.getPartNumber(), tag.getETag()));
         }
+        req.setParts(mpList);
 
         com.emc.object.s3.bean.CompleteMultipartUploadResult cmur = client.completeMultipartUpload(req);
         CompleteMultipartUploadResult ret = new CompleteMultipartUploadResult();
